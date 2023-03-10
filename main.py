@@ -26,29 +26,35 @@ class QuietHours:
     def add_cast(self, cast: pychromecast.Chromecast):
         def add():
             self.casts.add(cast)
-            print(f"Added \"{cast.name}\" to the list")
+            print(f"Added \"{cast.name}\" (uuid={cast.uuid}) to the list")
 
-        print(f"Discovered new device \"{cast.name}\"")
+        print(f"Discovered new device \"{cast.name}\" (uuid={cast.uuid})")
 
         if len(self.included):
-            add() if cast.name in self.included else print(f"\"{cast.name}\" is not included")
+            if cast.name in self.included or str(cast.uuid) in self.included:
+                add()
+            else:
+                print(f"\"{cast.name}\" (uuid={cast.uuid}) is not included")
         elif len(self.excluded):
-            add() if cast.name not in self.excluded else print(f"\"{cast.name}\" is excluded")
+            if cast.name not in self.excluded and str(cast.uuid) not in self.excluded:
+                add()
+            else:
+                print(f"\"{cast.name}\" (uuid={cast.uuid}) is excluded")
         else:
             add()
 
     def mute(self):
         for cast in self.casts:
-            print(f"Waiting for \"{cast.name}\" to become ready")
+            print(f"Waiting for \"{cast.name}\" (uuid={cast.uuid}) to become ready")
             cast.wait()
             mc = cast.media_controller
 
             if mc.status.player_is_playing:
-                print(f"\"{cast.name}\" is playing \"{mc.status.title}\" on \"{cast.app_display_name}\"")
+                print(f"\"{cast.name}\" (uuid={cast.uuid}) is playing \"{mc.status.title}\" on \"{cast.app_display_name}\"")
 
                 if not cast.status.volume_muted:
                     cast.set_volume_muted(True)
-                    print(f"Muted \"{cast.name}\"")
+                    print(f"Muted \"{cast.name}\" (uuid={cast.uuid})")
 
 
 parser = argparse.ArgumentParser(
@@ -64,8 +70,8 @@ group.add_argument(
     action = "extend",
     nargs = "+",
     type = str,
-    metavar = "NAME",
-    help = "list of device names to include"
+    metavar = "DEVICE",
+    help = "list of devices to include"
 )
 
 group.add_argument(
@@ -74,8 +80,8 @@ group.add_argument(
     action = "extend",
     nargs = "+",
     type = str,
-    metavar = "NAME",
-    help = "list of device names to exclude"
+    metavar = "DEVICE",
+    help = "list of devices to exclude"
 )
 
 args = parser.parse_args()
