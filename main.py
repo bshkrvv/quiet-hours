@@ -6,11 +6,13 @@ import time
 
 
 class QuietHours:
+    included: list[str]
     excluded: list[str]
     browser: pychromecast.CastBrowser
     casts: set[pychromecast.Chromecast] = set()
 
     def __init__(self, args):
+        self.included = args.include if args.include is not None else []
         self.excluded = args.exclude if args.exclude is not None else []
 
     def discover(self):
@@ -22,12 +24,18 @@ class QuietHours:
         print("Stopped discovery")
 
     def add_cast(self, cast: pychromecast.Chromecast):
+        def add():
+            self.casts.add(cast)
+            print(f"Added \"{cast.name}\" to the list")
+
         print(f"Discovered new device \"{cast.name}\"")
 
-        if cast.name in self.excluded:
-            print(f"\"{cast.name}\" is excluded")
+        if len(self.included):
+            add() if cast.name in self.included else print(f"\"{cast.name}\" is not included")
+        elif len(self.excluded):
+            add() if cast.name not in self.excluded else print(f"\"{cast.name}\" is excluded")
         else:
-            self.casts.add(cast)
+            add()
 
     def mute(self):
         for cast in self.casts:
@@ -48,14 +56,26 @@ parser = argparse.ArgumentParser(
     description = "Mute Chromecast devices"
 )
 
-parser.add_argument(
+group = parser.add_mutually_exclusive_group()
+
+group.add_argument(
+    "-i",
+    "--include",
+    action = "extend",
+    nargs = "+",
+    type = str,
+    metavar = "NAME",
+    help = "list of device names to include"
+)
+
+group.add_argument(
     "-e",
     "--exclude",
     action = "extend",
     nargs = "+",
     type = str,
     metavar = "NAME",
-    help = "list of device names to be excluded"
+    help = "list of device names to exclude"
 )
 
 args = parser.parse_args()
