@@ -19,6 +19,9 @@ class QuietHours:
         self.included = args.include if args.include is not None else []
         self.excluded = args.exclude if args.exclude is not None else []
 
+    def get_printed_name(self, cast: pychromecast.Chromecast):
+        return f"\"{cast.name}\" (uuid={cast.uuid})"
+
     def discover(self):
         print("Discovering ...")
         self.browser = pychromecast.get_chromecasts(blocking = False, callback = self.add_cast)
@@ -30,40 +33,40 @@ class QuietHours:
     def add_cast(self, cast: pychromecast.Chromecast):
         def add():
             self.casts.add(cast)
-            print(f"Added \"{cast.name}\" (uuid={cast.uuid}) to the list")
+            print(f"Added {self.get_printed_name(cast)} to the list")
 
         with self.lock:
-            print(f"Discovered new device \"{cast.name}\" (uuid={cast.uuid})")
+            print(f"Discovered new device {self.get_printed_name(cast)}")
 
             if len(self.included):
                 if cast.name in self.included or str(cast.uuid) in self.included:
                     add()
                 else:
-                    print(f"\"{cast.name}\" (uuid={cast.uuid}) is not included")
+                    print(f"{self.get_printed_name(cast)} is not included")
             elif len(self.excluded):
                 if cast.name not in self.excluded and str(cast.uuid) not in self.excluded:
                     add()
                 else:
-                    print(f"\"{cast.name}\" (uuid={cast.uuid}) is excluded")
+                    print(f"{self.get_printed_name(cast)} is excluded")
             else:
                 add()
 
     def mute(self):
         with self.lock:
             for cast in self.casts:
-                print(f"Waiting for \"{cast.name}\" (uuid={cast.uuid}) to become ready")
+                print(f"Waiting for {self.get_printed_name(cast)} to become ready")
                 cast.wait()
                 mc = cast.media_controller
 
                 if mc.status.player_is_playing:
-                    print(f"\"{cast.name}\" (uuid={cast.uuid}) is playing \"{mc.status.title}\" on \"{cast.app_display_name}\"")
+                    print(f"{self.get_printed_name(cast)} is playing \"{mc.status.title}\" on \"{cast.app_display_name}\"")
 
                     if not cast.status.volume_muted:
                         if not self.dry_run:
                             cast.set_volume_muted(True)
-                            print(f"Muted \"{cast.name}\" (uuid={cast.uuid})")
+                            print(f"Muted {self.get_printed_name(cast)}")
                         else:
-                            print(f"Would mute \"{cast.name}\" (uuid={cast.uuid})");
+                            print(f"Would mute {self.get_printed_name(cast)}");
 
 
 parser = argparse.ArgumentParser(
