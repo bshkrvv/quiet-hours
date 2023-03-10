@@ -6,12 +6,14 @@ import time
 
 
 class QuietHours:
+    dry_run: bool
     included: list[str]
     excluded: list[str]
     browser: pychromecast.CastBrowser
     casts: set[pychromecast.Chromecast] = set()
 
     def __init__(self, args):
+        self.dry_run = args.dry_run
         self.included = args.include if args.include is not None else []
         self.excluded = args.exclude if args.exclude is not None else []
 
@@ -53,13 +55,23 @@ class QuietHours:
                 print(f"\"{cast.name}\" (uuid={cast.uuid}) is playing \"{mc.status.title}\" on \"{cast.app_display_name}\"")
 
                 if not cast.status.volume_muted:
-                    cast.set_volume_muted(True)
-                    print(f"Muted \"{cast.name}\" (uuid={cast.uuid})")
+                    if not self.dry_run:
+                        cast.set_volume_muted(True)
+                        print(f"Muted \"{cast.name}\" (uuid={cast.uuid})")
+                    else:
+                        print(f"Would mute \"{cast.name}\" (uuid={cast.uuid})");
 
 
 parser = argparse.ArgumentParser(
     prog = "Quiet Hours",
     description = "Mute Chromecast devices"
+)
+
+parser.add_argument(
+    "-n",
+    "--dry-run",
+    action = "store_true",
+    help = "dry run"
 )
 
 group = parser.add_mutually_exclusive_group()
